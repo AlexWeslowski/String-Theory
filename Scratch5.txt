@@ -1287,3 +1287,381 @@ sympy.Derivative("-log(1 + x/n) - x/(n + x)", "n").doit() = x/(n + x)**2 + x/(n*
 x**2 / (x / 1 + x)
 x**2 / (2*x)
 x / 2
+
+
+
+mypow = lambda x, n: mpmath.power(mpmath.fadd(1, mpmath.fdiv(x, n)), mpmath.fadd(n, mpmath.fdiv(x, 2)))
+
+x**(a+bi) = e^(a*ln(x) + b*ln(x)i)
+myintpow = lambda i, zpow, n: mypow(mpmath.mpc(zpow.real * mpmath.log(i), zpow.imag * mpmath.log(i)), n)
+
+myintpow(2, mpmath.mpc(0.5, 14), mpmath.power(2, mpmath.mp.prec - 16))
+mpmath.power(2, mpmath.mpc(0.5, 14))
+
+
+arymindist = []
+maxprec = 8192
+maxminintpow2, maxminirrpow2 = 0, 0
+minminintpow2, minminirrpow2 = maxprec, maxprec
+maxlogminintpow2, maxlogminirrpow2 = 0, 0
+minlogminintpow2, minlogminirrpow2 = maxprec, maxprec
+for iprec in [128, 256, 512, 1024, 2048, 4096]:
+    for i in [int(2**(2 + f/2.9)) for f in range(0, int(iprec/2) + 1, int(iprec/2/5))]:
+        mpmath.mp.prec = iprec
+        minintdist, minintpow2 = 1, 2
+        minirrdist, minirrpow2 = 1, 2
+        imult = 1024
+        for pow2 in [x/imult for x in range(imult*2, imult*mpmath.mp.prec)]:
+            z1 = myintpow(i, mpmath.mpc(0.5, 14), mpmath.power(2, pow2))
+            z2 = mpmath.power(i, mpmath.mpc(0.5, 14))
+            if mpmath.fabs(z1 - z2) < minintdist:
+                minintdist = mpmath.fabs(z1 - z2)
+                minintpow2 = pow2
+            z1 = myintpow(i, mpmath.mpc(mpmath.power(0.5, mpmath.fdiv(1, 3)), 4 * mpmath.pi()), mpmath.power(2, pow2))
+            z2 = mpmath.power(i, mpmath.mpc(mpmath.power(0.5, mpmath.fdiv(1, 3)), 4 * mpmath.pi()))
+            if mpmath.fabs(z1 - z2) < minirrdist:
+                minirrdist = mpmath.fabs(z1 - z2)
+                minirrpow2 = pow2
+        mpmath.mp.prec = 64
+        if iprec/minintpow2 < minminintpow2:
+            minminintpow2 = iprec/minintpow2
+        if iprec/minirrpow2 < minminirrpow2:
+            minminirrpow2 = iprec/minirrpow2
+        if iprec/minintpow2 > maxminintpow2:
+            maxminintpow2 = iprec/minintpow2
+        if iprec/minirrpow2 > maxminirrpow2:
+            maxminirrpow2 = iprec/minirrpow2
+        log_iprec = mpmath.log(iprec)
+        if log_iprec/mpmath.log(minintpow2) < minlogminintpow2:
+            minlogminintpow2 = log_iprec/mpmath.log(minintpow2)
+        if log_iprec/mpmath.log(minirrpow2) < minlogminirrpow2:
+            minlogminirrpow2 = log_iprec/mpmath.log(minirrpow2)
+        if log_iprec/mpmath.log(minintpow2) > maxlogminintpow2:
+            maxlogminintpow2 = log_iprec/mpmath.log(minintpow2)
+        if log_iprec/mpmath.log(minirrpow2) > maxlogminirrpow2:
+            maxlogminirrpow2 = log_iprec/mpmath.log(minirrpow2)
+        arymindist.append((iprec, i, minintdist, minirrdist, mpmath.log(minintdist, 2), mpmath.log(minirrdist, 2), minintpow2, minirrpow2))
+        str_i = str(int(i)) + " (2^" + str(round(float(mpmath.log(i, 2)), 6)) + ")"
+        print(str_i + ", minintdist mpf('" + str(minintdist) + "') = mpmath.power(2, mpmath.mpf('" + str(mpmath.log(minintdist, 2)) + "'))")
+        print(str_i + ", minirrdist mpf('" + str(minirrdist) + "') = mpmath.power(2, mpmath.mpf('" + str(mpmath.log(minirrdist, 2)) + "'))")
+        paren1 = "(" + str(iprec) + "/" + str(round(iprec/minintpow2, 6)) + " or exp(log(" + str(iprec) + ")/" + str(round(mpmath.log(iprec)/mpmath.log(minintpow2), 6)) + ")"
+        paren2 = "(" + str(iprec) + "/" + str(round(iprec/minirrpow2, 6)) + " or exp(log(" + str(iprec) + ")/" + str(round(mpmath.log(iprec)/mpmath.log(minirrpow2), 6)) + ")"
+        print(str_i + ", minintpow2 " + str(minintpow2) + " " + paren1 + ", minirrpow2 " + str(minirrpow2) + " " + paren2 + ", precision " + str(iprec))
+
+def print_fractions():
+    minintfrac = fractions.Fraction(float(1/minminintpow2)).limit_denominator(maxprec)
+    minirrfrac = fractions.Fraction(float(1/minminirrpow2)).limit_denominator(maxprec)
+    maxintfrac = fractions.Fraction(float(1/maxminintpow2)).limit_denominator(maxprec)
+    maxirrfrac = fractions.Fraction(float(1/maxminirrpow2)).limit_denominator(maxprec)
+    minlogintfrac = fractions.Fraction(float(1/minlogminintpow2)).limit_denominator(maxprec)
+    minlogirrfrac = fractions.Fraction(float(1/minlogminirrpow2)).limit_denominator(maxprec)
+    maxlogintfrac = fractions.Fraction(float(1/maxlogminintpow2)).limit_denominator(maxprec)
+    maxlogirrfrac = fractions.Fraction(float(1/maxlogminirrpow2)).limit_denominator(maxprec)
+    s = ""
+    for sfrac in ["minintfrac", "minirrfrac", "maxintfrac", "maxirrfrac", "minlogintfrac", "minlogirrfrac", "maxlogintfrac", "maxlogirrfrac"]:
+        s += sfrac + " " + str(eval(sfrac + ".numerator")) + "/" + str(eval(sfrac + ".denominator")) + "\n"
+    print(s)
+
+
+
+# 
+# 
+# 2048/2.937184 or exp(log(2048)/1.164568)
+# 128/2.308418 or exp(log(128)/1.208335)
+# 
+# 
+
+4 (2^2.0), minintdist mpf('6.5398808571072116e-27') = mpmath.power(2, mpmath.mpf('-86.9827942088694137'))
+4 (2^2.0), minirrdist mpf('2.03305020043455506e-27') = mpmath.power(2, mpmath.mpf('-88.6684127230556148'))
+4 (2^2.0), minintpow2 49.4013671875 (128/2.591021 or exp(log(128)/1.244117), minirrpow2 49.734375 (128/2.573673 or exp(log(128)/1.241978), precision 128
+70 (2^6.129283), minintdist mpf('2.72490512710450974e-26') = mpmath.power(2, mpmath.mpf('-84.923924466553804'))
+70 (2^6.129283), minirrdist mpf('2.52702191114166302e-25') = mpmath.power(2, mpmath.mpf('-81.7107641986182795'))
+70 (2^6.129283), minintpow2 52.1435546875 (128/2.454762 or exp(log(128)/1.227119), minirrpow2 53.8427734375 (128/2.377292 or exp(log(128)/1.217247), precision 128
+1239 (2^10.27496), minintdist mpf('4.82057747245047174e-25') = mpmath.power(2, mpmath.mpf('-80.7789963903060636'))
+1239 (2^10.27496), minirrdist mpf('3.56601989515870698e-24') = mpmath.power(2, mpmath.mpf('-77.8919595253806935'))
+1239 (2^10.27496), minintpow2 51.48046875 (128/2.48638 or exp(log(128)/1.231104), minirrpow2 52.2001953125 (128/2.452098 or exp(log(128)/1.226782), precision 128
+21826 (2^14.41376), minintdist mpf('1.46555141379509864e-24') = mpmath.power(2, mpmath.mpf('-79.1748306964230254'))
+21826 (2^14.41376), minirrdist mpf('2.97604768392533431e-23') = mpmath.power(2, mpmath.mpf('-74.8309485400993158'))
+21826 (2^14.41376), minintpow2 54.431640625 (128/2.351573 or exp(log(128)/1.213935), minirrpow2 51.974609375 (128/2.462741 or exp(log(128)/1.228127), precision 128
+384260 (2^18.551723), minintdist mpf('1.92581711556490518e-23') = mpmath.power(2, mpmath.mpf('-75.4588754776678405'))
+384260 (2^18.551723), minirrdist mpf('6.37342985608313831e-22') = mpmath.power(2, mpmath.mpf('-70.4103481208993409'))
+384260 (2^18.551723), minintpow2 52.5576171875 (128/2.435422 or exp(log(128)/1.224669), minirrpow2 51.771484375 (128/2.472404 or exp(log(128)/1.229346), precision 128
+6764984 (2^22.689655), minintdist mpf('2.5558519499368543e-23') = mpmath.power(2, mpmath.mpf('-75.0505419131346042'))
+6764984 (2^22.689655), minirrdist mpf('2.52924989290549234e-21') = mpmath.power(2, mpmath.mpf('-68.4217804086010125'))
+6764984 (2^22.689655), minintpow2 55.44921875 (128/2.308418 or exp(log(128)/1.208335), minirrpow2 58.79296875 (128/2.177131 or exp(log(128)/1.190968), precision 128
+
+4 (2^2.0), minintdist mpf('9.78975109555719596e-53') = mpmath.power(2, mpmath.mpf('-172.77091684925948'))
+4 (2^2.0), minirrdist mpf('6.83293437332407586e-53') = mpmath.power(2, mpmath.mpf('-173.289683758464481'))
+4 (2^2.0), minintpow2 91.6142578125 (256/2.794325 or exp(log(256)/1.227464), minirrpow2 91.8935546875 (256/2.785832 or exp(log(256)/1.226638), precision 256
+1574 (2^10.62022), minintdist mpf('8.51362139896553452e-51') = mpmath.power(2, mpmath.mpf('-166.328559904407132'))
+1574 (2^10.62022), minirrdist mpf('5.10630170698518611e-50') = mpmath.power(2, mpmath.mpf('-163.744125962143644'))
+1574 (2^10.62022), minintpow2 94.3994140625 (256/2.711881 or exp(log(256)/1.219381), minirrpow2 94.083984375 (256/2.720973 or exp(log(256)/1.220279), precision 256
+619772 (2^19.241378), minintdist mpf('5.34650093639009184e-49') = mpmath.power(2, mpmath.mpf('-160.355881633338525'))
+619772 (2^19.241378), minirrdist mpf('1.99798487228631293e-47') = mpmath.power(2, mpmath.mpf('-155.132074799879072'))
+619772 (2^19.241378), minintpow2 95.89453125 (256/2.6696 or exp(log(256)/1.215182), minirrpow2 94.4853515625 (256/2.709415 or exp(log(256)/1.219137), precision 256
+243959929 (2^27.862069), minintdist mpf('1.02016248121665617e-47') = mpmath.power(2, mpmath.mpf('-156.101821511257087'))
+243959929 (2^27.862069), minirrdist mpf('5.67821481239887386e-45') = mpmath.power(2, mpmath.mpf('-146.98132684127752'))
+243959929 (2^27.862069), minintpow2 97.4140625 (256/2.627957 or exp(log(256)/1.21101), minirrpow2 96.1015625 (256/2.663848 or exp(log(256)/1.214608), precision 256
+96029500394 (2^36.482759), minintdist mpf('3.48652336501863663e-47') = mpmath.power(2, mpmath.mpf('-154.328831309794049'))
+96029500394 (2^36.482759), minirrdist mpf('7.61520341966572826e-43') = mpmath.power(2, mpmath.mpf('-139.914025505213775'))
+96029500394 (2^36.482759), minintpow2 97.7646484375 (256/2.618533 or exp(log(256)/1.21006), minirrpow2 95.931640625 (256/2.668567 or exp(log(256)/1.215079), precision 256
+37799916363473 (2^45.103448), minintdist mpf('6.68542614650384676e-45') = mpmath.power(2, mpmath.mpf('-146.745744745535951'))
+37799916363473 (2^45.103448), minirrdist mpf('7.36103848703998103e-41') = mpmath.power(2, mpmath.mpf('-133.319142575945487'))
+37799916363473 (2^45.103448), minintpow2 97.533203125 (256/2.624747 or exp(log(256)/1.210686), minirrpow2 96.0673828125 (256/2.664796 or exp(log(256)/1.214702), precision 256
+
+4 (2^2.0), minintdist mpf('3.63061980426069468e-104') = mpmath.power(2, mpmath.mpf('-343.620306008163056'))
+4 (2^2.0), minirrdist mpf('6.08243794055394731e-104') = mpmath.power(2, mpmath.mpf('-342.875872172943075'))
+4 (2^2.0), minintpow2 177.791015625 (512/2.879786 or exp(log(512)/1.204168), minirrpow2 177.4951171875 (512/2.884586 or exp(log(512)/1.204556), precision 512
+787110 (2^19.586206), minintdist mpf('6.19374118510228546e-101') = mpmath.power(2, mpmath.mpf('-332.8839264845585'))
+787110 (2^19.586206), minirrdist mpf('9.05916309446108897e-99') = mpmath.power(2, mpmath.mpf('-325.691503616782669'))
+787110 (2^19.586206), minintpow2 182.458984375 (512/2.80611 or exp(log(512)/1.198174), minirrpow2 182.3193359375 (512/2.808259 or exp(log(512)/1.19835), precision 512
+154885785622 (2^37.172414), minintdist mpf('1.01443332582273151e-97') = mpmath.power(2, mpmath.mpf('-322.206351157772989'))
+154885785622 (2^37.172414), minirrdist mpf('2.54087789128431256e-94') = mpmath.power(2, mpmath.mpf('-310.915913874942304'))
+154885785622 (2^37.172414), minintpow2 182.447265625 (512/2.80629 or exp(log(512)/1.198189), minirrpow2 181.802734375 (512/2.816239 or exp(log(512)/1.199004), precision 512
+30478062041312124 (2^54.758621), minintdist mpf('7.82108089527331953e-95') = mpmath.power(2, mpmath.mpf('-312.615801008494584'))
+30478062041312124 (2^54.758621), minirrdist mpf('5.15815351169621049e-91') = mpmath.power(2, mpmath.mpf('-299.928601924967705'))
+30478062041312124 (2^54.758621), minintpow2 183.087890625 (512/2.796471 or exp(log(512)/1.197383), minirrpow2 183.3779296875 (512/2.792048 or exp(log(512)/1.197019), precision 512
+5997401647012267425792 (2^72.344828), minintdist mpf('2.13050272570871753e-92') = mpmath.power(2, mpmath.mpf('-304.526190832374227'))
+5997401647012267425792 (2^72.344828), minirrdist mpf('4.76751741693362964e-86') = mpmath.power(2, mpmath.mpf('-283.432577951239655'))
+5997401647012267425792 (2^72.344828), minintpow2 182.8916015625 (512/2.799472 or exp(log(512)/1.197629), minirrpow2 183.03515625 (512/2.797277 or exp(log(512)/1.197449), precision 512
+1180154645883665818180386816 (2^89.931034), minintdist mpf('1.88926956609974126e-89') = mpmath.power(2, mpmath.mpf('-294.733771880925411'))
+1180154645883665818180386816 (2^89.931034), minirrdist mpf('2.56405403306425446e-82') = mpmath.power(2, mpmath.mpf('-271.039677116150088'))
+1180154645883665818180386816 (2^89.931034), minintpow2 182.91015625 (512/2.799188 or exp(log(512)/1.197606), minirrpow2 184.052734375 (512/2.781811 or exp(log(512)/1.196176), precision 512
+
+4 (2^2.0), minintdist mpf('1.48352648656008453e-207') = mpmath.power(2, mpmath.mpf('-687.070084957071578'))
+4 (2^2.0), minirrdist mpf('5.10023280877207602e-207') = mpmath.power(2, mpmath.mpf('-685.288552538836126'))
+4 (2^2.0), minintpow2 348.7685546875 (1024/2.936045 or exp(log(1024)/1.183975), minirrpow2 348.380859375 (1024/2.939312 or exp(log(1024)/1.1842), precision 1024
+154885785622 (2^37.172414), minintdist mpf('4.35529743230837562e-200') = mpmath.power(2, mpmath.mpf('-662.262847730642875'))
+154885785622 (2^37.172414), minirrdist mpf('5.71372489600114676e-197') = mpmath.power(2, mpmath.mpf('-651.905403117636809'))
+154885785622 (2^37.172414), minintpow2 352.734375 (1024/2.903034 or exp(log(1024)/1.181693), minirrpow2 352.9248046875 (1024/2.901468 or exp(log(1024)/1.181584), precision 1024
+5997401647012267425792 (2^72.344828), minintdist mpf('2.21630476503492713e-195') = mpmath.power(2, mpmath.mpf('-646.627822222382925'))
+5997401647012267425792 (2^72.344828), minirrdist mpf('1.18851473448131469e-188') = mpmath.power(2, mpmath.mpf('-624.273322049779067'))
+5997401647012267425792 (2^72.344828), minintpow2 353.9990234375 (1024/2.892663 or exp(log(1024)/1.180972), minirrpow2 354.1953125 (1024/2.89106 or exp(log(1024)/1.18086), precision 1024
+232228066448517703763433590095872 (2^107.517241), minintdist mpf('8.46754549696143507e-189') = mpmath.power(2, mpmath.mpf('-624.762466100227741'))
+232228066448517703763433590095872 (2^107.517241), minirrdist mpf('1.5360506675213829e-180') = mpmath.power(2, mpmath.mpf('-597.327831274749335'))
+232228066448517703763433590095872 (2^107.517241), minintpow2 355.921875 (1024/2.877036 or exp(log(1024)/1.179883), minirrpow2 355.5537109375 (1024/2.880015 or exp(log(1024)/1.180091), precision 1024
+8992206628896364834114578052301820549660672 (2^142.689655), minintdist mpf('4.46255433784302914e-184') = mpmath.power(2, mpmath.mpf('-609.076899723195255'))
+8992206628896364834114578052301820549660672 (2^142.689655), minirrdist mpf('2.46919047446190818e-171') = mpmath.power(2, mpmath.mpf('-566.745666094822311'))
+8992206628896364834114578052301820549660672 (2^142.689655), minintpow2 357.2734375 (1024/2.866152 or exp(log(1024)/1.179122), minirrpow2 356.072265625 (1024/2.875821 or exp(log(1024)/1.179798), precision 1024
+348191247050200187832943816988495522269615389191176192 (2^177.862069), minintdist mpf('1.46009881572074658e-178') = mpmath.power(2, mpmath.mpf('-590.757134879662948'))
+348191247050200187832943816988495522269615389191176192 (2^177.862069), minirrdist mpf('9.57347308813459972e-163') = mpmath.power(2, mpmath.mpf('-538.215237062509927'))
+348191247050200187832943816988495522269615389191176192 (2^177.862069), minintpow2 358.57421875 (1024/2.855755 or exp(log(1024)/1.178394), minirrpow2 354.00390625 (1024/2.892623 or exp(log(1024)/1.180969), precision 1024
+
+4 (2^2.0), minintdist mpf('5.22062437414692846e-413') = mpmath.power(2, mpmath.mpf('-1369.57208082850204'))
+4 (2^2.0), minirrdist mpf('4.40736857537476558e-412') = mpmath.power(2, mpmath.mpf('-1366.49445754355594'))
+4 (2^2.0), minintpow2 689.9501953125 (2048/2.96833 or exp(log(2048)/1.166447), minirrpow2 689.9111328125 (2048/2.968498 or exp(log(2048)/1.166457), precision 2048
+5997401647012267425792 (2^72.344828), minintdist mpf('9.21370341135259451e-401') = mpmath.power(2, mpmath.mpf('-1328.88938489142323'))
+5997401647012267425792 (2^72.344828), minirrdist mpf('2.61754169723847754e-394') = mpmath.power(2, mpmath.mpf('-1307.45145686626028'))
+5997401647012267425792 (2^72.344828), minintpow2 695.0732421875 (2048/2.946452 or exp(log(2048)/1.165128), minirrpow2 697.4599609375 (2048/2.936369 or exp(log(2048)/1.164518), precision 2048
+8992206628896364834114578052301820549660672 (2^142.689655), minintdist mpf('4.98906272418351815e-389') = mpmath.power(2, mpmath.mpf('-1289.91126010367372'))
+8992206628896364834114578052301820549660672 (2^142.689655), minirrdist mpf('5.00935988160127759e-377') = mpmath.power(2, mpmath.mpf('-1250.04226551135886'))
+8992206628896364834114578052301820549660672 (2^142.689655), minintpow2 694.5908203125 (2048/2.948499 or exp(log(2048)/1.165252), minirrpow2 695.2685546875 (2048/2.945624 or exp(log(2048)/1.165078), precision 2048
+13482468711604290716096770149231877978064139330389855008377012224 (2^213.034483), minintdist mpf('9.5995804440310887e-379') = mpmath.power(2, mpmath.mpf('-1255.74777660903308'))
+13482468711604290716096770149231877978064139330389855008377012224 (2^213.034483), minirrdist mpf('1.17828907093562783e-359') = mpmath.power(2, mpmath.mpf('-1192.33549254403263'))
+13482468711604290716096770149231877978064139330389855008377012224 (2^213.034483), minintpow2 696.3154296875 (2048/2.941196 or exp(log(2048)/1.16481), minirrpow2 695.9326171875 (2048/2.942814 or exp(log(2048)/1.164908), precision 2048
+20214945014191930013340819770094283364076860349237129321258448291881398297541985959936 (2^283.37931), minintdist mpf('1.37913764110400544e-368') = mpmath.power(2, mpmath.mpf('-1222.00577247023352'))
+20214945014191930013340819770094283364076860349237129321258448291881398297541985959936 (2^283.37931), minirrdist mpf('1.07563788767294367e-342') = mpmath.power(2, mpmath.mpf('-1135.99421597356879'))
+20214945014191930013340819770094283364076860349237129321258448291881398297541985959936 (2^283.37931), minintpow2 698.197265625 (2048/2.933268 or exp(log(2048)/1.16433), minirrpow2 695.5595703125 (2048/2.944392 or exp(log(2048)/1.165004), precision 2048
+30309286130593384559555323965198701283584195061713760619280616111453466306994200310500354942532862345216000 (2^353.724138), minintdist mpf('2.5328390344705289e-358') = mpmath.power(2, mpmath.mpf('-1187.90950257503749'))
+30309286130593384559555323965198701283584195061713760619280616111453466306994200310500354942532862345216000 (2^353.724138), minirrdist mpf('8.11856248202498544e-326') = mpmath.power(2, mpmath.mpf('-1079.92733463489074'))
+30309286130593384559555323965198701283584195061713760619280616111453466306994200310500354942532862345216000 (2^353.724138), minintpow2 698.302734375 (2048/2.932825 or exp(log(2048)/1.164303), minirrpow2 697.2666015625 (2048/2.937184 or exp(log(2048)/1.164568), precision 2048
+
+
+
+
+fbase, maxden, iprec = 2, 48, 128
+mpmath.mp.prec = iprec
+number1 = mpmath.fsum([mpmath.power(fbase, i) for i in range(1, int(iprec/1.75) - 4, 2) if random.random() < 0.9])
+number2 = mpmath.fsum([mpmath.power(fbase, i) for i in range(2, int(iprec/1.75) - 3, 2) if random.random() < 0.9])
+
+fbase, maxden, iprec = 3, 48, 128
+mpmath.mp.prec = iprec
+number1 = mpmath.fsum([mpmath.power(fbase, i) for i in range(1, int(iprec/1.75) - 4, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+number2 = mpmath.fsum([mpmath.power(fbase, i) for i in range(2, int(iprec/1.75) - 3, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+
+fbase, maxden, iprec = 5, 48, 128
+mpmath.mp.prec = iprec
+number1 = mpmath.fsum([mpmath.power(fbase, i) for i in range(1, int(iprec/1.75) - 4, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+number2 = mpmath.fsum([mpmath.power(fbase, i) for i in range(2, int(iprec/1.75) - 3, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+
+fbase, maxden, iprec = 7, 48, 128
+mpmath.mp.prec = iprec
+number1 = mpmath.fsum([mpmath.power(fbase, i) for i in range(1, int(iprec/1.75) - 4, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+number2 = mpmath.fsum([mpmath.power(fbase, i) for i in range(2, int(iprec/1.75) - 3, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+
+fbase, maxden, iprec = 43, 48, 256
+mpmath.mp.prec = iprec
+number1 = mpmath.fsum([mpmath.power(fbase, i) for i in range(1, int(iprec/1.75) - 4, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+number2 = mpmath.fsum([mpmath.power(fbase, i) for i in range(2, int(iprec/1.75) - 3, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+
+fbase, maxden, iprec = 2*mpmath.e(), 48, 128
+mpmath.mp.prec = iprec
+number1 = mpmath.fsum([mpmath.power(fbase, i) for i in range(1, int(iprec/1.75) - 4, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+number2 = mpmath.fsum([mpmath.power(fbase, i) for i in range(2, int(iprec/1.75) - 3, 2) if i <= int(mpmath.log(mpmath.power(2, mpmath.mp.prec), fbase)) and random.random() < 0.9])
+
+
+fracs = [0]
+for iden in range(2, maxden + 1):
+    for inum in range(1, iden):
+        if mpmath.fdiv(inum, iden) not in fracs:
+            fracs.append(mpmath.fdiv(inum, iden))
+
+def is_fraction(f, ilimit):
+    imul = 4
+    if mpmath.fmod(imul * f, 1) == 0:
+        return 1
+    frac2 = fractions.Fraction(float(f)).limit_denominator(ilimit)
+    if mpmath.fmod(imul * f * frac2.denominator, 1) == 0:
+        return 2
+    frac3 = fractions.Fraction(float(f**2)).limit_denominator(ilimit**2)
+    if mpmath.fmod(imul * f**2 * frac3.denominator, 1) == 0:
+        return 3
+    for sq in range(2, 163 + 1):
+        frac4 = fractions.Fraction(float(f * mpmath.sqrt(sq))).limit_denominator(ilimit)
+        if mpmath.fmod(imul * f * mpmath.sqrt(sq) * frac4.denominator, 1) == 0:
+            return 4
+    for sq in range(2, 163 + 1):
+        frac5 = fractions.Fraction(float(f / mpmath.sqrt(sq))).limit_denominator(ilimit)
+        if mpmath.fmod(imul * (f / mpmath.sqrt(sq)) * frac5.denominator, 1) == 0:
+            return 5
+    pi = mpmath.pi()
+    for sq in range(2, 163 + 1):
+        frac6 = fractions.Fraction(float(f * pi * mpmath.sqrt(sq))).limit_denominator(ilimit)
+        if mpmath.fmod(imul * f * pi * mpmath.sqrt(sq) * frac6.denominator, 1) == 0:
+            return 6
+    for sq in range(2, 163 + 1):
+        frac7 = fractions.Fraction(float(f / pi / mpmath.sqrt(sq))).limit_denominator(ilimit)
+        if mpmath.fmod(imul * (f / pi / mpmath.sqrt(sq)) * frac7.denominator, 1) == 0:
+            return 7
+    return -1
+
+str_z = lambda z: "mpmath.mpc('" + str(z.real) + "', '" + str(z.imag) + "')"
+def str_found(op, sreal1, simag1, sreal2, simag2, z):
+    if sreal1 in ["-0", "(-0)", "(0)"]:
+        sreal1 = "0"
+    if simag1 in ["-0", "(-0)", "(0)"]:
+        simag1 = "0"
+    if sreal2 in ["-0", "(-0)", "(0)"]:
+        sreal2 = "0"
+    if simag2 in ["-0", "(-0)", "(0)"]:
+        simag2 = "0"
+    iprec = mpmath.mp.prec
+    mpmath.mp.prec = 128
+    s = "found mpmath." + op + "(mpmath.mpc(" + sreal1 + ", " + simag1 + "), mpmath.mpc(" + sreal2 + ", " + simag2 + ")) = " + str_z(z)
+    mpmath.mp.prec = iprec
+    return s
+
+def add_z(z):
+    abs_zreal = abs(float(z.real))
+    if abs_zreal not in [0, 1] and abs_zreal not in found_floats:
+        found_floats.append(abs_zreal)
+    abs_zimag = abs(float(z.imag))
+    if abs_zimag not in [0, 1] and abs_zimag not in found_floats:
+        found_floats.append(abs_zimag)
+
+found_floats = []
+mulimag = ["-1", "1", "-0.5 * mpmath.pi()", "0.5 * mpmath.pi()", "-mpmath.pi()", "mpmath.pi()", "2 * mpmath.pi()", "-2 * mpmath.pi()"]
+bfirst = True
+for i in range(0, len(fracs)):
+    if bfirst:
+        sbase = str(int(fbase)) if mpmath.fmod(fbase, 1) == 0 else str(fbase)
+        snumber1 = str(int(number1)) if mpmath.fmod(number1, 1) == 0 else str(number1)
+        snumber2 = str(int(number2)) if mpmath.fmod(number2, 1) == 0 else str(number2)
+        print("fbase " + sbase + ", maxden " + str(maxden) + ", iprec " + str(iprec))
+        print("number1 " + snumber1 + ", mpmath.power(" + sbase + ", mpmath.mpf('" + str(mpmath.log(number1, fbase)) + "'))")
+        print("number2 " + snumber2 + ", mpmath.power(" + sbase + ", mpmath.mpf('" + str(mpmath.log(number2, fbase)) + "'))")
+        if mpmath.fmod(fbase, 1) == 0 and mpmath.fmod(fbase, 2) != 0:
+            mulimag.append(str(int(-fbase)) + " * mpmath.pi()")
+            mulimag.append(str(int(fbase)) + " * mpmath.pi()")
+            mulimag.append("(mpmath.pi() / " + str(int(fbase)) + ")")
+            mulimag.append("(-mpmath.pi() / " + str(int(fbase)) + ")")
+            mulimag.append(str(int(-fbase)) + " * 2 * mpmath.pi()")
+            mulimag.append(str(int(fbase)) + " * 2 * mpmath.pi()")
+            mulimag.append("(2 * mpmath.pi() / " + str(int(fbase)) + ")")
+            mulimag.append("(-2 * mpmath.pi() / " + str(int(fbase)) + ")")
+        bfirst = False
+    for j in range(0, len(fracs)):
+        fraci = 0 if fracs[i] == 0 else fractions.Fraction(float(fracs[i])).limit_denominator(maxden)
+        fracj = 0 if fracs[j] == 0 else fractions.Fraction(float(fracs[j])).limit_denominator(maxden)
+        for addthisi in range(-maxden, maxden + 1):
+            for addthisj in range(-maxden, maxden + 1):
+                sfraci = "0" if (fraci == 0 and addthisi == 0) else "" if (fraci == 0) else str(fraci.numerator) + "/" + str(fraci.denominator)
+                sfracj = "0" if (fracj == 0 and addthisj == 0) else "" if (fracj == 0) else str(fracj.numerator) + "/" + str(fracj.denominator)
+                for mulimagi in mulimag:
+                    for mulimagj in mulimag:
+                        z = mpmath.fdiv(mpmath.mpc(addthisi + fracs[i], eval(mulimagi) * number1), mpmath.mpc(addthisj + fracs[j], eval(mulimagj) * number2))
+                        if is_fraction(z.real, 4*maxden) > 0 or is_fraction(z.imag, 4*maxden) > 0:
+                            add_z(z)
+                            sreal1 = ("" if addthisi == 0 else str(addthisi) + (" + " if sfraci != "" else "")) + sfraci
+                            simag1 = ("" if mulimagi == "1" else mulimagi + " * ") + "number1"
+                            sreal2 = ("" if addthisj == 0 else str(addthisj) + (" + " if sfracj != "" else "")) + sfracj
+                            simag2 = ("" if mulimagj == "1" else mulimagj + " * ") + "number2"
+                            print(str_found("fdiv", sreal1, simag1, sreal2, simag2, z))
+                        if fracs[i] != 0 or fracs[j] != 0:
+                            z = mpmath.fdiv(mpmath.mpc(addthisi - fracs[i], eval(mulimagi) * number1), mpmath.mpc(addthisj - fracs[j], eval(mulimagj) * number2))
+                            if is_fraction(z.real, 4*maxden) > 0 or is_fraction(z.imag, 4*maxden) > 0:
+                                add_z(z)
+                                sreal1 = ("-" if (addthisi == 0 and sfraci != "0") else "" if (addthisi == 0) else str(addthisi) + (" - " if sfraci != "" else "")) + sfraci
+                                simag1 = ("" if mulimagi == "1" else mulimagi + " * ") + "number1"
+                                sreal2 = ("-" if (addthisj == 0 and sfracj != "0") else "" if (addthisj == 0) else str(addthisj) + (" - " if sfracj != "" else "")) + sfracj
+                                simag2 = ("" if mulimagj == "1" else mulimagj + " * ") + "number2"
+                                print(str_found("fdiv", sreal1, simag1, sreal2, simag2, z))
+                        
+                        z = mpmath.fdiv(mpmath.mpc(addthisi + fracs[i], eval(mulimagi) * number1), mpmath.mpc(number2, eval(mulimagj) * (addthisj + fracs[j])))
+                        if is_fraction(z.real, 4*maxden) > 0 or is_fraction(z.imag, 4*maxden) > 0:
+                            add_z(z)
+                            sreal1 = ("" if addthisi == 0 else str(addthisi) + (" + " if sfraci != "" else "")) + sfraci
+                            simag1 = ("" if mulimagi == "1" else mulimagi + " * ") + "number1"
+                            sreal2 = "number2"
+                            simag2 = ("" if mulimagj == "1" else mulimagj + " * ") + "(" + ("" if addthisj == 0 else str(addthisj) + (" + " if sfracj != "" else "")) + sfracj + ")"
+                            print(str_found("fdiv", sreal1, simag1, sreal2, simag2, z))
+-                        if fracs[i] != 0 or fracs[j] != 0:
+                            z = mpmath.fdiv(mpmath.mpc(addthisi - fracs[i], eval(mulimagi) * number1), mpmath.mpc(number2, eval(mulimagj) * (addthisj - fracs[j])))
+                            if is_fraction(z.real, 4*maxden) > 0 or is_fraction(z.imag, 4*maxden) > 0:
+                                add_z(z)
+                                sreal1 = ("-" if (addthisi == 0 and sfraci != "0") else "" if (addthisi == 0) else str(addthisi) + (" - " if sfraci != "" else "")) + sfraci
+                                simag1 = ("" if mulimagi == "1" else mulimagi + " * ") + "number1"
+                                sreal2 = "number2"
+                                simag2 = ("" if mulimagj == "1" else mulimagj + " * ") + "(" + ("-" if (addthisj == 0 and sfraj != "0") else "" if (addthisj == 0) else str(addthisj) + (" - " if sfracj != "" else "")) + sfracj + ")"
+                                print(str_found("fdiv", sreal1, simag1, sreal2, simag2, z))
+                        
+                        z = mpmath.log(mpmath.mpc(addthisi + fracs[i], eval(mulimagi) * number1), mpmath.mpc(addthisj + fracs[j], eval(mulimagj) * number2))
+                        if is_fraction(z.real, 4*maxden) > 0 or is_fraction(z.imag, 4*maxden) > 0:
+                            add_z(z)
+                            sreal1 = ("" if addthisi == 0 else str(addthisi) + (" + " if sfraci != "" else "")) + sfraci
+                            simag1 = ("" if mulimagi == "1" else mulimagi + " * ") + "number1"
+                            sreal2 = ("" if addthisj == 0 else str(addthisj) + (" + " if sfracj != "" else "")) + sfracj
+                            simag2 = ("" if mulimagj == "1" else mulimagj + " * ") + "number2"
+                            print(str_found("log", sreal1, simag1, sreal2, simag2, z))
+                        if fracs[i] != 0 or fracs[j] != 0:
+                            z = mpmath.log(mpmath.mpc(addthisi - fracs[i], eval(mulimagi) * number1), mpmath.mpc(addthisj - fracs[j], eval(mulimagj) * number2))
+                            if is_fraction(z.real, 4*maxden) > 0 or is_fraction(z.imag, 4*maxden) > 0:
+                                add_z(z)
+                                sreal1 = ("-" if (addthisi == 0 and sfraci != "0") else "" if (addthisi == 0) else str(addthisi) + (" - " if sfraci != "" else "")) + sfraci
+                                simag1 = ("" if mulimagi == "1" else mulimagi + " * ") + "number1"
+                                sreal2 = ("-" if (addthisj == 0 and sfracj != "0") else "" if (addthisj == 0) else str(addthisj) + (" - " if sfracj != "" else "")) + sfracj
+                                simag2 = ("" if mulimagj == "1" else mulimagj + " * ") + "number2"
+                                print(str_found("log", sreal1, simag1, sreal2, simag2, z))
+                         
+                        z = mpmath.log(mpmath.mpc(addthisi + fracs[i], eval(mulimagi) * number1), mpmath.mpc(number2, eval(mulimagj) * (addthisj + fracs[j])))
+                        if is_fraction(z.real, 4*maxden) > 0 or is_fraction(z.imag, 4*maxden) > 0:
+                            add_z(z)
+                            sreal1 = ("" if addthisi == 0 else str(addthisi) + (" + " if sfraci != "" else "")) + sfraci
+                            simag1 = ("" if mulimagi == "1" else mulimagi + " * ") + "number1"
+                            sreal2 = "number2"
+                            simag2 = ("" if mulimagj == "1" else mulimagj + " * ") + "(" + ("" if addthisj == 0 else str(addthisj) + (" + " if sfracj != "" else "")) + sfracj + ")"
+                            print(str_found("log", sreal1, simag1, sreal2, simag2, z))
+                        if fracs[i] != 0 or fracs[j] != 0:
+                            z = mpmath.log(mpmath.mpc(addthisi - fracs[i], eval(mulimagi) * number1), mpmath.mpc(number2, eval(mulimagj) * (addthisj + fracs[j])))
+                            if is_fraction(z.real, 4*maxden) > 0 or is_fraction(z.imag, 4*maxden) > 0:
+                                add_z(z)
+                                sreal1 = ("-" if (addthisi == 0 and sfraci != "0") else "" if (addthisi == 0) else str(addthisi) + (" - " if sfraci != "" else "")) + sfraci
+                                simag1 = ("" if mulimagi == "1" else mulimagi + " * ") + "number1"
+                                sreal2 = "number2"
+                                simag2 = ("" if mulimagj == "1" else mulimagj + " * ") + "(" + ("-" if (addthisj == 0 and sfracj != "0") else "" if (addthisj == 0) else str(addthisj) + (" - " if sfracj != "" else "")) + sfracj + ")"
+                                print(str_found("log", sreal1, simag1, sreal2, simag2, z))
+
+
+
+
+
